@@ -1,6 +1,6 @@
-const { exec } = require('child_process');
+import { exec } from 'child_process';
 
-const getStatus = (containerName) => {
+export const getStatus = (containerName: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     exec(`docker container inspect -f '{{.State.Status}}' ${containerName}`, (error, stdout, stderr) => {
       if (error) {

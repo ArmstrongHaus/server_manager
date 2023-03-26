@@ -5,14 +5,14 @@
   "description": "Manage my minecraft containers",
   "scripts": {
     "start": "run-p start:**",
-    "start:app": "cd client && npm start",
-    "start:server": "cd api && npm start",
+    "start:client": "cd client && npm start",
+    "start:api": "cd api && npm start",
     "build": "run-p build:**",
-    "build:app": "cd client && npm run build",
-    "build:server": "cd api && npm run build",
+    "build:client": "cd client && npm run build",
+    "build:api": "cd api && npm run build",
     "test": "run-p test:**",
-    "test:app": "cd client && npm run test",
-    "test:server": "cd api && npm run test"
+    "test:client": "cd client && npm run test",
+    "test:api": "cd api && npm run test"
   },
   "author": "",
   "license": "ISC",
