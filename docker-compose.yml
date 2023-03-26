@@ -1,9 +1,13 @@
 version: '3'
 services:
-  app:
-    build: .
+  api:
+    build: ./api
     volumes:
-      - ./src:/app/src
+      - ./api:/app
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - ${PORT}:3000
+  client:
+    build: ./client
+    volumes:
+      - ./client:/app
