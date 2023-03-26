@@ -20,8 +20,9 @@ RUN npm run build
 ###
 FROM node:18-alpine AS api-deps
 
-RUN apk update
-RUN apk add docker
+# dockerode doesn't require these?
+# RUN apk update
+# RUN apk add docker
 
 ###
 # API Build
