@@ -1,111 +1,37 @@
-import { exec } from 'child_process';
-import { config } from '../config';
-import Docker from 'dockerode';
+import docker, { Docker } from './docker';
 
-export interface ContainerStatus {
-  id?: string;
-  name: string;
-  status?: string;
-  state?: string;
+export interface ActivePlayers {
+  count: number;
 }
 
 export class Minecraft {
-  private docker = Docker();
-  private _containerIds: Record<string, string>;
+  constructor(private docker: Docker) {}
 
-  constructor() {}
+  public async getActivePlayers(containerName: string): Promise<ActivePlayers> {
+    const result: ActivePlayers = {
+      count: 0,
+    };
 
-  private async getContainerIds(): Promise<Record<string, string>> {
-    if (!this._containerIds) {
-      const containers = await this.docker.listContainers({
-        all: true,
-        filters: {
-          name: config.CONTAINER_NAMES,
+    try {
+      const lines = await this.docker.runCommand(containerName, 'list', 1);
+      // send "list" over stdin
+      // stdout:
+      // There are 1/10 players online:
+      // AdaK93
+
+      if (lines && lines.length > 0) {
+        const playerRegex = /There are (\d+)\/(\d+) players online/;
+        const match = lines[0].match(playerRegex);
+        if (match) {
+          result.count = parseInt(match[1]);
         }
-      });
-
-      this._containerIds = {};
-      containers.forEach(c => {
-        const containerId = c.Id;
-        for (let fqn of c.Names) {
-          const name = fqn.substring(1);
-          if (config.CONTAINER_NAMES.includes(name)) {
-            this._containerIds[name] = containerId;
-          }
-        }
-      });
-    }
-    return this._containerIds;
-  }
-  
-  public async getStatus(containerName?: string): Promise<ContainerStatus[]> {
-    let nameFilter = config.CONTAINER_NAMES;
-    if (containerName && nameFilter.includes(containerName)) {
-      nameFilter = [containerName];
-    }
-
-    const containerIds = await this.getContainerIds();
-    const containerStatuses = await Promise.all(nameFilter.map(async name => {
-      const containerId = containerIds[name];
-      const record: ContainerStatus = {
-        name,
-        id: containerId,
-        status: undefined,
-      };
-
-      if (containerId) {
-        const containerInfo = await this.docker.getContainer(containerId).inspect();
-        record.status = containerInfo.State.Status;
-        record.state = containerInfo.State.Health.Status;
       }
+    } catch (error) {
+      console.error(`Failed to get active players:`, error);
+    }
 
-      return record;
-    }));
-
-    return containerStatuses;
+    return result;
   }
 }
 
-export default new Minecraft();
-
-// TODO use something like the below code to get how many users are currently
-// active on a given server
-async function runDockerCommand(containerId: string): Promise<string> {
-  const docker = new Docker();
-  const container = docker.getContainer(containerId);
-
-  await container.start();
-
-  const attachOpts = {
-    stream: true,
-    stdin: true,
-    stdout: true,
-    stderr: true,
-  };
-
-  const stream = await container.attach(attachOpts);
-
-  stream.write('list\n'); // send "list" over stdin
-  // stoud:
-  // There are 1/10 players online:
-  // AdaK93
-
-  const chunks: Buffer[] = [];
-
-  return new Promise<string>((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-
-    stream.on('end', () => {
-      const output = Buffer.concat(chunks).toString();
-      resolve(output);
-    });
-
-    stream.on('error', (error: Error) => {
-      reject(error);
-    });
-
-    container.detach();
-  });
-}
+export default new Minecraft(docker);

@@ -1,4 +1,5 @@
 import express from 'express';
+import docker from '../services/docker';
 import minecraft from '../services/minecraft';
 
 
@@ -29,8 +30,33 @@ router.get('/', (req, res, next) => {
  * }
  */
 router.get('/status', async (req, res) => {
-  const status = await minecraft.getStatus();
+  let containerName;
+  if (req.query.container && typeof req.query.container === 'string') {
+    containerName = req.query.container.trim();
+  }
+
+  const status = await docker.getStatus(containerName);
   res.send({ status });
+});
+
+/**
+ * Get the number of active players on a given container
+ * 
+ * An example of the returned values for a container with active players
+ * {
+ *   "count": 2
+ * }
+ * 
+ * An example of the returned values for a container with no players
+ * {
+ *   "count": 0
+ * }
+ */
+router.get('/minecraft/:container/players', async (req, res) => {
+  const containerName = req.params.container.trim();
+  const activePlayers = await minecraft.getActivePlayers(containerName);
+
+  res.send(activePlayers);
 });
 
 export default router;

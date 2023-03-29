@@ -6,7 +6,7 @@
   "main": "build/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "nodemon src/index.ts"
+    "start": "nodemon -L -e ts src/index.ts"
   },
   "keywords": [],
   "author": "",
