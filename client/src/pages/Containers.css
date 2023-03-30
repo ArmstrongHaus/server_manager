@@ -1,0 +1,9 @@
+.container-list {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+}
+
+.error {
+  color: red;
+}

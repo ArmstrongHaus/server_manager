@@ -1,5 +1,6 @@
-import { config } from '../config';
 import Dockerode from 'dockerode';
+import { config } from '../config';
+import executor from '../utils/docker-executor';
 import { DockerResult, ContainerStatus } from '@shared/types/docker.types';
 
 export class Docker {
@@ -56,7 +57,7 @@ export class Docker {
       return ret;
     }, {});
   }
-  
+
   /**
    * Get the status of all (or one) docker container
    * @param containerName the optional containerName to get the status, if it's empty return the status of all containers
@@ -75,7 +76,7 @@ export class Docker {
       }
     }
 
-    try {
+    return executor(async () => {
       const containerIds = await this.getContainerIds(nameFilter);
       const containerStatuses = await Promise.all(nameFilter.map(async name => {
         const containerId = containerIds[name];
@@ -98,12 +99,7 @@ export class Docker {
         success: true,
         result: containerStatuses,
       };
-    } catch (err) {
-      return {
-        success: false,
-        error: err.toString(),
-      };
-    }
+    });
   }
 
   /**
@@ -111,7 +107,7 @@ export class Docker {
    * @param containerName the container to stop
    */
   public async stopContainer(containerName): Promise<DockerResult<string>> {
-    try {
+    return executor(async () => {
       const containerId = await this.getContainerId(containerName);
       const container = this.docker.getContainer(containerId);
       await container.stop();
@@ -119,12 +115,7 @@ export class Docker {
         success: true,
         result: `Container ${containerName} stopping`,
       }
-    } catch (err) {
-      return {
-        success: false,
-        error: err.toString(),
-      };
-    }
+    });
   }
 
   /**
@@ -132,7 +123,7 @@ export class Docker {
    * @param containerName the container to start
    */
   public async startContainer(containerName): Promise<DockerResult<string>> {
-    try {
+    return executor(async () => {
       const containerId = await this.getContainerId(containerName);
       const container = this.docker.getContainer(containerId);
       await container.start();
@@ -140,12 +131,7 @@ export class Docker {
         success: true,
         result: `Container ${containerName} starting`,
       }
-    } catch (err) {
-      return {
-        success: false,
-        error: err.toString(),
-      };
-    }
+    });
   }
 
   /**
@@ -154,7 +140,7 @@ export class Docker {
    * @param command the command to run
    */
   public async runCommand(containerName: string, command: string, readLines = 1): Promise<DockerResult<string[]>> {
-    try {
+    return executor(async () => {
       const containerId = await this.getContainerId(containerName);
       const container = this.docker.getContainer(containerId);
       const stream = await container.attach({
@@ -196,12 +182,7 @@ export class Docker {
         success: true,
         result: output,
       };
-    } catch (err) {
-      return {
-        success: false,
-        error: err.toString(),
-      };
-    }
+    });
   }
 }
 
