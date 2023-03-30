@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { config } from './config';
-import logo from './logo.svg';
+import { config } from '@config';
+import ServersPage from '@pages/servers';
 import './App.css';
-
-console.log(process.env);
 
 function App() {
   const [data, setData] = useState('');
@@ -19,13 +17,11 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          {config.API_URI}
-        </p><p>
-          {data ?? 'Loading...'}
-        </p>
+        <h1>Server Management</h1>
       </header>
+      <body>
+        <ServersPage />
+      </body>
     </div>
   );
 }
