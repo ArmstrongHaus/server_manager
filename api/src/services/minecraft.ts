@@ -19,7 +19,7 @@ export class Minecraft {
       // There are 1/10 players online:
       // AdaK93
 
-      if (lines && lines.length > 0) {
+      if (lines.success && lines.result.length > 0) {
         const playerRegex = /There are (\d+)\/(\d+) players online/;
         const match = lines[0].match(playerRegex);
         if (match) {

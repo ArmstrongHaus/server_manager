@@ -26,7 +26,7 @@ app.use('/api', apiRouter);
 // React Routes
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.sendFile(path.join(CLIENT_PATH, 'index.html'));
-})
+});
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

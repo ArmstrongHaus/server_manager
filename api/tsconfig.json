@@ -3,9 +3,13 @@
         "target": "es6",
         "module": "commonjs",
         "outDir": "build",
-        "rootDir": "src",
-        "esModuleInterop": true
+        "rootDirs": ["src", "../shared"],
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "@shared/*": ["../shared/*"]
+        }
     },
-    "include": ["src/**/*.ts"],
+    "include": ["src/**/*.ts", "../shared/**/*.ts"],
     "exclude": ["node_modules"]
 }

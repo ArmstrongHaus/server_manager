@@ -1,12 +1,6 @@
 import { config } from '../config';
 import Dockerode from 'dockerode';
-
-export interface ContainerStatus {
-  id?: string;
-  name: string;
-  status?: string;
-  state?: string;
-}
+import { DockerResult, ContainerStatus } from '@shared/types/docker.types';
 
 export class Docker {
   private docker = Dockerode();
@@ -16,15 +10,19 @@ export class Docker {
 
   /**
    * Get the containerId for the given container
+   * @throws if not found
    * @param containerName the container name
    */
-  private async getContainerId(containerName): Promise<string | null> {
+  private async getContainerId(containerName): Promise<string> {
     let containerId = this._containerIds[containerName];
     if (!containerId) {
       const cacheValue = await this.getContainerIds([containerName]);
       containerId = cacheValue[containerName];
     }
-    return containerId ?? null;
+    if (!containerId) {
+      throw new Error(`Container ${containerName} not found`);
+    }
+    return containerId;
   }
 
   /**
@@ -64,35 +62,90 @@ export class Docker {
    * @param containerName the optional containerName to get the status, if it's empty return the status of all containers
    * @returns the status info
    */
-  public async getStatus(containerName?: string): Promise<ContainerStatus[]> {
+  public async getStatus(containerName?: string): Promise<DockerResult<ContainerStatus[]>> {
     let nameFilter = config.CONTAINER_NAMES;
     if (containerName !== undefined) {
       if (nameFilter.includes(containerName)) {
         nameFilter = [containerName];
       } else {
-        return []; // Invalid container
+        return {
+          success: false,
+          error: `Container ${containerName} is not a managed container`,
+        }; // Invalid container
       }
     }
 
-    const containerIds = await this.getContainerIds(nameFilter);
-    const containerStatuses = await Promise.all(nameFilter.map(async name => {
-      const containerId = containerIds[name];
-      const record: ContainerStatus = {
-        name,
-        id: containerId,
-        status: undefined,
+    try {
+      const containerIds = await this.getContainerIds(nameFilter);
+      const containerStatuses = await Promise.all(nameFilter.map(async name => {
+        const containerId = containerIds[name];
+        const record: ContainerStatus = {
+          name,
+          id: containerId,
+          status: undefined,
+        };
+
+        if (containerId) {
+          const containerInfo = await this.docker.getContainer(containerId).inspect();
+          record.status = containerInfo.State.Status;
+          record.state = containerInfo.State.Health.Status;
+        }
+
+        return record;
+      }));
+
+      return {
+        success: true,
+        result: containerStatuses,
       };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.toString(),
+      };
+    }
+  }
 
-      if (containerId) {
-        const containerInfo = await this.docker.getContainer(containerId).inspect();
-        record.status = containerInfo.State.Status;
-        record.state = containerInfo.State.Health.Status;
+  /**
+   * Stop a docker container
+   * @param containerName the container to stop
+   */
+  public async stopContainer(containerName): Promise<DockerResult<string>> {
+    try {
+      const containerId = await this.getContainerId(containerName);
+      const container = this.docker.getContainer(containerId);
+      await container.stop();
+      return {
+        success: true,
+        result: `Container ${containerName} stopping`,
       }
+    } catch (err) {
+      return {
+        success: false,
+        error: err.toString(),
+      };
+    }
+  }
 
-      return record;
-    }));
-
-    return containerStatuses;
+  /**
+   * Start a docker container
+   * @param containerName the container to start
+   */
+  public async startContainer(containerName): Promise<DockerResult<string>> {
+    try {
+      const containerId = await this.getContainerId(containerName);
+      const container = this.docker.getContainer(containerId);
+      await container.start();
+      return {
+        success: true,
+        result: `Container ${containerName} starting`,
+      }
+    } catch (err) {
+      return {
+        success: false,
+        error: err.toString(),
+      };
+    }
   }
 
   /**
@@ -100,9 +153,9 @@ export class Docker {
    * @param containerName the container to run the command on
    * @param command the command to run
    */
-  public async runCommand(containerName: string, command: string, readLines = 1): Promise<string[] | null> {
-    const containerId = await this.getContainerId(containerName);
-    if (containerId) {
+  public async runCommand(containerName: string, command: string, readLines = 1): Promise<DockerResult<string[]>> {
+    try {
+      const containerId = await this.getContainerId(containerName);
       const container = this.docker.getContainer(containerId);
       const stream = await container.attach({
         hijack: true,
@@ -114,7 +167,7 @@ export class Docker {
 
       stream.write(`${command}\n\x04`);
 
-      return new Promise<string[]>((resolve, reject) => {
+      const output = await new Promise<string[]>((resolve, reject) => {
         const timeout = setTimeout(() => reject('timeout'), 5000);
 
         let buffer = '';
@@ -138,9 +191,17 @@ export class Docker {
           clearTimeout(timeout);
         });
       });
-    }
 
-    return null; // Command could not be run
+      return {
+        success: true,
+        result: output,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.toString(),
+      };
+    }
   }
 }
 

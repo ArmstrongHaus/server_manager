@@ -39,6 +39,20 @@ router.get('/status', async (req, res) => {
   res.send({ status });
 });
 
+router.get('/start/:container', async (req, res) => {
+  const containerName = req.params.container.trim();
+  const result = await docker.startContainer(containerName);
+  
+  res.send(result);
+});
+
+router.get('/stop/:container', async (req, res) => {
+  const containerName = req.params.container.trim();
+  const result = await docker.stopContainer(containerName);
+  
+  res.send(result);
+});
+
 /**
  * Get the number of active players on a given container
  * 
