@@ -1,7 +1,16 @@
 ###
+# Shared
+###
+FROM node:18-alpine AS shared
+
+WORKDIR /shared
+
+COPY shared ./
+
+###
 # Client
 ###
-FROM node:18-alpine AS client
+FROM shared AS client
 
 WORKDIR /app
 
@@ -9,8 +18,10 @@ COPY client/package*.json ./
 RUN npm install
 
 COPY client/tsconfig.json ./
+COPY client/vite.config.ts ./
 COPY client/public ./public
 COPY client/src ./src
+COPY client/index.html ./
 COPY client/.env* ./
 
 RUN npm run build
@@ -18,7 +29,7 @@ RUN npm run build
 ###
 # API Deps
 ###
-FROM node:18-alpine AS api-deps
+FROM shared AS api-deps
 
 # dockerode doesn't require these?
 # RUN apk update
@@ -54,5 +65,6 @@ COPY --from=client --chown=node:www /app/build ./build
 
 WORKDIR /app
 
-USER node
-CMD ["node", "api/build/index.js"]
+# USER node # must be root to interact with docker
+ENV CLIENT_DIR "../../../../client/build"
+CMD ["node", "api/build/app/src/index.js"]

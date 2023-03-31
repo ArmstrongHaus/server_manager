@@ -1,17 +1,5 @@
-import { config } from "src/config";
-
-export interface ContainerStatus {
-  id?: string;
-  name: string;
-  status?: string;
-  state?: string;
-}
-
-export interface DockerResult<T> {
-  success: boolean,
-  result?: T,
-  error?: string,
-}
+import { config } from "@config";
+import { ContainerStatus, DockerResult } from "@shared/types/docker.types";
 
 export class DockerService {
   public async getContainerStatus(containerName?: string): Promise<DockerResult<ContainerStatus[]>> {

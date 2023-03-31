@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import docker, { ContainerStatus } from 'src/services/docker.service';
-import ContainerInfo from 'src/components/ContainerInfo';
+import docker from '@services/docker.service';
+import ContainerInfo from '@components/ContainerInfo';
 import './Containers.css';
+import { ContainerStatus } from '@shared/types/docker.types';
 
 type State<T> = React.Dispatch<React.SetStateAction<T>>;
 

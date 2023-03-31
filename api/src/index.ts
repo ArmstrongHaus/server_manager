@@ -8,7 +8,8 @@ require('dotenv').config({ path: '../.env'});
 import apiRouter from './routes/api';
 
 const PORT = process.env.API_PORT || 5000;
-const CLIENT_PATH = path.join(__dirname, '..', '..', 'client', 'build');
+const CLIENT_DIR = process.env.CLIENT_DIR || '../../client/build';
+const CLIENT_PATH = path.join(__dirname, CLIENT_DIR);
 
 const app = express();
 

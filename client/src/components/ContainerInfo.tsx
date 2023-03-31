@@ -1,5 +1,5 @@
+import { ContainerStatus } from "@shared/types/docker.types";
 import React from "react";
-import { ContainerStatus } from "src/services/docker.service";
 import "./ContainerInfo.css";
 
 interface Props {

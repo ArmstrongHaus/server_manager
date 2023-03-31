@@ -1,3 +1,3 @@
 export const config = {
-  API_URI: process.env.REACT_APP_API_URI ?? '',
+  API_URI: import.meta.env.VITE_API_URI ?? '',
 };
