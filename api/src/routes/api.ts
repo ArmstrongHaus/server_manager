@@ -41,6 +41,9 @@ router.get('/status', async (req, res) => {
 
 router.get('/start/:container', async (req, res) => {
   const containerName = req.params.container.trim();
+   if (req.query.stopOthers !== undefined) {
+    await docker.stopWithRelatedContainers(containerName);
+   }
   const result = await docker.startContainer(containerName);
   
   res.send(result);

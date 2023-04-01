@@ -3,9 +3,15 @@ import { config } from '../config';
 import executor from '../utils/docker-executor';
 import { DockerResult, ContainerStatus } from '@shared/types/docker.types';
 
+// Info that doesn't change about a container
+interface ContainerCacheInfo {
+  id: string,
+  image: string,
+}
+
 export class Docker {
   private docker = Dockerode();
-  private _containerIds: Record<string, string> = {};
+  private _containerCache: Record<string, ContainerCacheInfo> = {};
 
   constructor() {}
 
@@ -15,15 +21,15 @@ export class Docker {
    * @param containerName the container name
    */
   private async getContainerId(containerName): Promise<string> {
-    let containerId = this._containerIds[containerName];
-    if (!containerId) {
-      const cacheValue = await this.getContainerIds([containerName]);
-      containerId = cacheValue[containerName];
+    let cached = this._containerCache[containerName];
+    if (!cached) {
+      const cacheValue = await this.getContainerCacheInfo([containerName]);
+      cached = cacheValue[containerName];
     }
-    if (!containerId) {
+    if (!cached) {
       throw new Error(`Container ${containerName} not found`);
     }
-    return containerId;
+    return cached.id;
   }
 
   /**
@@ -31,8 +37,8 @@ export class Docker {
    * @param containerNames The names of the containers to get the IDs
    * @returns the name=>id KeyValue pair for containers to their id
    */
-  private async getContainerIds(containerNames: string[]): Promise<Record<string, string>> {
-    const missingIds = containerNames.filter(name => !this._containerIds.hasOwnProperty(name));
+  private async getContainerCacheInfo(containerNames: string[]): Promise<Record<string, ContainerCacheInfo>> {
+    const missingIds = containerNames.filter(name => !this._containerCache.hasOwnProperty(name));
     if (missingIds) {
       const containers = await this.docker.listContainers({
         all: true,
@@ -42,18 +48,20 @@ export class Docker {
       });
 
       containers.forEach(c => {
-        const containerId = c.Id;
         for (let fqn of c.Names) {
           const name = fqn.substring(1);
           if (config.CONTAINER_NAMES.includes(name)) {
-            this._containerIds[name] = containerId;
+            this._containerCache[name] = {
+              id: c.Id,
+              image: c.Image,
+            };
           }
         }
       });
     }
 
-    return containerNames.reduce((ret: Record<string, string>, val: string) => {
-      ret[val] = this._containerIds[val];
+    return containerNames.reduce((ret: Record<string, ContainerCacheInfo>, val: string) => {
+      ret[val] = this._containerCache[val];
       return ret;
     }, {});
   }
@@ -77,17 +85,17 @@ export class Docker {
     }
 
     return executor(async () => {
-      const containerIds = await this.getContainerIds(nameFilter);
+      const containerCache = await this.getContainerCacheInfo(nameFilter);
       const containerStatuses = await Promise.all(nameFilter.map(async name => {
-        const containerId = containerIds[name];
+        const cacheInfo = containerCache[name];
         const record: ContainerStatus = {
           name,
-          id: containerId,
           status: undefined,
+          ...cacheInfo
         };
 
-        if (containerId) {
-          const containerInfo = await this.docker.getContainer(containerId).inspect();
+        if (cacheInfo) {
+          const containerInfo = await this.docker.getContainer(cacheInfo.id).inspect();
           record.status = containerInfo.State.Status;
           record.state = containerInfo.State.Health.Status;
         }
@@ -111,11 +119,82 @@ export class Docker {
       const containerId = await this.getContainerId(containerName);
       const container = this.docker.getContainer(containerId);
       await container.stop();
+      await container.wait();
       return {
         success: true,
         result: `Container ${containerName} stopping`,
       }
     });
+  }
+
+  /**
+   * Stop a container and any containers running on the same Image
+   * @param containerName the container to stop with its related
+   * @returns boolean
+   */
+  public async stopWithRelatedContainers(containerName: string): Promise<DockerResult<string>> {
+    return executor(async () => {
+      const containerCache = await this.getContainerCacheInfo(config.CONTAINER_NAMES);
+      if (!containerCache.hasOwnProperty(containerName)) {
+        throw new Error(`Container ${containerName} was not found`);
+      }
+
+      const containerByImage = Object.keys(containerCache).reduce(
+        (agg, name) => {
+          const {image, id} = containerCache[name] ?? {};
+          if (image && id) {
+            if (agg.hasOwnProperty(image)) {
+              agg[image].push({id, name});
+            } else {
+              agg[image] = [{id, name}];
+            }
+          }
+          return agg;
+        },
+        {} as Record<string, {id: string, name: string}[]>,
+      );
+
+      const imageName = containerCache[containerName].image;
+      const imageContainers = containerByImage[imageName];
+      await Promise.all(imageContainers.map(async container => {
+        const con = this.docker.getContainer(container.id);
+        const info = await con.inspect();
+        // If the container is running, stop it
+        if (info.State.Status === 'running') {
+          await con.stop();
+          await con.wait();
+        }
+      }));
+
+      return {
+        success: true,
+        result: `Stopped ${imageContainers.map(c => c.name).join(',')}`,
+      };
+    });
+  }
+
+  /**
+   * Wait until the give container is running, or error
+   * @param container container to watch
+   * @param tries how many polls to make, at 1s intervals
+   */
+  private async waitToRunning(container, tries=10): Promise<void> {
+    return new Promise((accept, reject) => {
+      let tryCount = 0;
+      const interval = setInterval(async () => {
+        const info = await container.inspect();
+        if (info.State.Status === 'running') {
+          clearInterval(interval);
+          accept();
+        }
+
+        tryCount += 1;
+        if (tryCount > tries) {
+          clearInterval(interval);
+          reject();
+        }
+      }, 1000);
+    })
   }
 
   /**
@@ -127,6 +206,7 @@ export class Docker {
       const containerId = await this.getContainerId(containerName);
       const container = this.docker.getContainer(containerId);
       await container.start();
+      await this.waitToRunning(container);
       return {
         success: true,
         result: `Container ${containerName} starting`,

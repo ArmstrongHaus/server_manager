@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Alert from 'react-bootstrap/Alert';
+import Stack from 'react-bootstrap/Stack';
+
 import docker from '@services/docker.service';
-import ContainerInfo from '@components/ContainerInfo';
-import './Containers.css';
+import ServerInfo from '@components/ServerInfo';
 import { ContainerStatus } from '@shared/types/docker.types';
 
 type State<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -17,24 +19,34 @@ async function getContainerStatus(setError: State<string>, setContainers: State<
   }
 }
 
-function Containers() {
+function ServerList() {
   const [error, setError] = useState('');
   const [containers, setContainers] = useState<ContainerStatus[]>([]);
 
-  useEffect(() => {
+  const reloadContainers = useCallback(() => {
     getContainerStatus(setError, setContainers);
   }, [setError, setContainers]);
 
+  useEffect(() => {
+    reloadContainers();
+  }, []);
+
   return (
-    <div className="container-list">
-      {containers && containers.map((container, idx) => (
-        <ContainerInfo container={container} key={container.id ?? idx} />
-      ))}
-      {error && (
-        <div className="error">{error}</div>
-      )}
-    </div>
+    <>
+    {error && (
+      <Alert variant="danger">
+        {error}
+      </Alert>
+    )}
+    {containers && (
+      <Stack direction="horizontal" gap={3} className="justify-content-center flex-wrap">
+        { containers.map((container, idx) => (
+          <ServerInfo key={container.id ?? idx} container={container} onReload={reloadContainers} />
+        ))}
+      </Stack>
+    )}
+    </>
   );
 }
 
-export default Containers;
+export default ServerList;

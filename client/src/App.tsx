@@ -1,17 +1,17 @@
 import React from 'react';
-import ContainersPage from '@pages/Containers';
-import './App.css';
+import ServersList from '@pages/ServerList';
+import Container from 'react-bootstrap/Container';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Server Manager</h1>
-      </header>
-      <div className="App-body">
-        <ContainersPage />
-      </div>
-    </div>
+    <Container className="p-3">
+      <Container className="p-5 mb-4 bg-dark rounded-3">
+        <h1 className="header text-center text-light">
+          Server Manager
+        </h1>
+      </Container>
+      <ServersList />
+    </Container>
   );
 }
 
