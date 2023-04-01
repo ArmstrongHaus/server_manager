@@ -57,7 +57,7 @@ FROM api-deps AS app
 WORKDIR /app/api
 
 COPY --chown=node:www api/package*.json .
-RUN npm install --production
+RUN npm install --omit=dev
 COPY --from=api-builder --chown=node:www /app/build ./build
 
 WORKDIR /app/client
