@@ -65,6 +65,9 @@ COPY --from=client --chown=node:www /app/build ./build
 
 WORKDIR /app
 
+VOLUME [ "/config" ]
+
 # USER node # must be root to interact with docker
-ENV CLIENT_DIR "../../../../client/build"
+ENV CLIENT_DIR "/app/client/build"
+ENV CONFIG_DIR "/config"
 CMD ["node", "api/build/app/src/index.js"]

@@ -1,0 +1,16 @@
+{
+  "servers": {
+    "group name of servers": [
+      { "name": "docker container name 1" },
+      { "name": "docker container name 2" }
+    ],
+    "minecraft": [
+      { "name": "minecraft-private-server" },
+      { "name": "minecraft-public-server" }
+    ],
+    "ark": [
+      { "name": "ark-pve-server" },
+      { "name": "ark-pvp-server" }
+    ]
+  }
+}

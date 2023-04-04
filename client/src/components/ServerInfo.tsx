@@ -83,13 +83,13 @@ const ServerToggler: React.FC<ServerTogglerProps> = ({ variant, toggleText, conf
   );
 };
 
-interface ServerInfoFooterProps {
+interface ServerInfoBodyProps {
   status?: string
   name: string
   onReload: () => void
 }
 
-const ServerInfoFooter: React.FC<ServerInfoFooterProps> = ({ name, status, onReload }) => {
+const ServerInfoBody: React.FC<ServerInfoBodyProps> = ({ name, status, onReload }) => {
   if (status === undefined) {
     return (
       <Card.Text className="text-center">Server Not Found</Card.Text>
@@ -147,13 +147,12 @@ const ServerInfo: React.FC<ServerInfoProps> = ({ container, onReload }) => {
 
   return (
     <Card className="col-3 align-middle">
+      <Card.Title className="d-flex bg-secondary text-light rounded-top p-2 m-0">
+        {iconClasses && <i className={`fa-solid ${iconClasses} align-self-center pe-2`} />}
+        {container.name}
+      </Card.Title>
       <Card.Body className="d-flex flex-column">
-        <Card.Title>
-          <i className={`fa-solid ${iconClasses} align-bottom pe-1`} />
-          {container.name}
-        </Card.Title>
-
-        <ServerInfoFooter name={container.name} status={status} onReload={onReload} />
+        <ServerInfoBody name={container.name} status={status} onReload={onReload} />
       </Card.Body>
     </Card>
   );

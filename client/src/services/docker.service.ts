@@ -1,5 +1,5 @@
 import { config } from "@config";
-import { ContainerStatus, DockerResult } from "@shared/types/docker.types";
+import { DockerResult, GroupStatus } from "@shared/types/docker.types";
 
 export class DockerService {
   private async executeRequest<T>(uri: string): Promise<any> {
@@ -7,7 +7,7 @@ export class DockerService {
     return await response.json();
   }
 
-  public async getContainerStatus(containerName?: string): Promise<DockerResult<ContainerStatus[]>> {
+  public async getContainerStatus(containerName?: string): Promise<DockerResult<GroupStatus>> {
     const uri = `${config.API_URI}/status${containerName ? `?container=${containerName}` : ''}`;
     const json = await this.executeRequest(uri);
     return json.status;

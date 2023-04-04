@@ -1,12 +1,13 @@
 import Dockerode from 'dockerode';
+import { DockerResult, ContainerStatus } from '@shared/types/docker.types';
 import { config } from '../config';
 import executor from '../utils/docker-executor';
-import { DockerResult, ContainerStatus } from '@shared/types/docker.types';
 
 // Info that doesn't change about a container
 interface ContainerCacheInfo {
   id: string,
   image: string,
+  group: string,
 }
 
 export class Docker {
@@ -54,6 +55,7 @@ export class Docker {
             this._containerCache[name] = {
               id: c.Id,
               image: c.Image,
+              group: config.CONTAINER_GROUP[name],
             };
           }
         }
@@ -139,36 +141,23 @@ export class Docker {
         throw new Error(`Container ${containerName} was not found`);
       }
 
-      const containerByImage = Object.keys(containerCache).reduce(
-        (agg, name) => {
-          const {image, id} = containerCache[name] ?? {};
-          if (image && id) {
-            if (agg.hasOwnProperty(image)) {
-              agg[image].push({id, name});
-            } else {
-              agg[image] = [{id, name}];
-            }
+      const containerGroup = config.SERVERS[containerCache[containerName].group];
+      await Promise.all(containerGroup.map(async container => {
+        const { id } = containerCache[container.name] ?? {};
+        if (id) {
+          const con = this.docker.getContainer(id);
+          const info = await con.inspect();
+          // If the container is running, stop it
+          if (info.State.Status === 'running') {
+            await con.stop();
+            await con.wait();
           }
-          return agg;
-        },
-        {} as Record<string, {id: string, name: string}[]>,
-      );
-
-      const imageName = containerCache[containerName].image;
-      const imageContainers = containerByImage[imageName];
-      await Promise.all(imageContainers.map(async container => {
-        const con = this.docker.getContainer(container.id);
-        const info = await con.inspect();
-        // If the container is running, stop it
-        if (info.State.Status === 'running') {
-          await con.stop();
-          await con.wait();
         }
       }));
 
       return {
         success: true,
-        result: `Stopped ${imageContainers.map(c => c.name).join(',')}`,
+        result: `Stopped ${containerGroup.map(c => c.name).join(',')}`,
       };
     });
   }

@@ -5,8 +5,8 @@ services:
       context: .
     volumes:
       - ${SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+      - ./config:/config
     environment:
       - API_PORT=${API_PORT}
-      - CONTAINER_NAMES=minecraft-bedrock,stopped-server,server-not-found
     ports:
       - ${API_PORT}:${API_PORT}
