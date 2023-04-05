@@ -146,7 +146,7 @@ const ServerInfo: React.FC<ServerInfoProps> = ({ container, onReload }) => {
   }
 
   return (
-    <Card className="col-3 align-middle">
+    <Card className="col-lg-3 col-md-4 col-5 align-middle">
       <Card.Title className="d-flex bg-secondary text-light rounded-top p-2 m-0">
         {iconClasses && <i className={`fa-solid ${iconClasses} align-self-center pe-2`} />}
         {container.name}
